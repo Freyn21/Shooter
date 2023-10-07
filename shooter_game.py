@@ -113,9 +113,11 @@ for i in range(1,3):
 #Музыка
 mixer.init()
 mixer.music.load('space.ogg')
-mixer.music.play()
+Space = mixer.Sound('space.ogg')
+Space.set_volume(0.2)
+Space.play()
 fire = mixer.Sound('fire.ogg')
-
+fire.set_volume(0.2)
 
 
 while run:
@@ -124,6 +126,7 @@ while run:
             run = False
         elif e.type == KEYDOWN:
             if e.key == K_SPACE:
+                fire.play()
                 Starship.fire()
                 if col_bul != 0:
                     col_bul -= 1
