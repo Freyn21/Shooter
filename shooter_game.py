@@ -183,6 +183,8 @@ while run:
         window.blit(win, (200,200))
     if sprite.spritecollide(Starship, asteroids, True):
         bonus = 1
+        rock = Asteroid('asteroid.png', randint(5, win_width - 80), 20, randint(30, 50),randint(10, 30), 1)
+        asteroids.add(rock)
 
 
 
