@@ -97,7 +97,7 @@ FPS = 60
 max_lost = 3
 goal = 1000
 #Персонажи
-Starship = Player('rocket.png', 350, 420, 80, 80, 5 )
+Starship = Player('rocket.png', round(win_width/2, 0),  win_height - 80, 80, 80, 5 )
 monsters = sprite.Group()
 for i in range(1,6):
     monster = Enemy('ufo.png', randint(5, win_width - 80), 20, randint(60, 80),randint(30, 50), 1)
