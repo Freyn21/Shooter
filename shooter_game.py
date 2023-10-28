@@ -4,7 +4,7 @@ from pygame import *
 from random import randint
 class GameSprite(sprite.Sprite):
     #конструктор класса
-    def __init__(self, player_image, player_x, player_y, x, y, player_speed):
+    def __init__(self, player_image, player_x, player_y, x, y, player_speed, sk_y):
         super().__init__()
  
         # каждый спрайт должен хранить свойство image - изображение
@@ -15,6 +15,7 @@ class GameSprite(sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = player_x
         self.rect.y = player_y
+        self.sk_y = sk_y
 
     def reset(self):
         window.blit(self.image, (self.rect.x, self.rect.y))
@@ -39,12 +40,12 @@ class Player(GameSprite):
 
     def fire(self):
         if col_bul != 0:
-            bullet = Bullet('bullet.png', self.rect.centerx - 30, self.rect.top, 40, 40, 3 )
+            bullet = Bullet('bullet.png', self.rect.centerx - 30, self.rect.top, 40, 40, 3, 0 )
             bullets.add(bullet)
             count = -15
             if bonus != 0:
                 for i in range(1, randint(1,6)):
-                    bullet = Bullet('bullet.png', self.rect.centerx - count, self.rect.top, 40, 40, 3 )
+                    bullet = Bullet('bullet.png', self.rect.centerx - count, self.rect.top, 40, 40, 3, 0 )
                     bullets.add(bullet)
                     count += 15
 
@@ -69,7 +70,35 @@ class Asteroid(GameSprite):
             if self.rect.y > win_height - 20:
                 self.rect.x = randint(80, win_width - 80)
                 self.rect.y = 0
-                
+
+class MiniBoss(GameSprite):
+    def update(self):
+            self.rect.y += self.sk_y
+            self.rect.x += self.speed
+            global lost
+            if self.rect.y > win_height - 20:
+                self.rect.x = randint(200, 720)
+                self.rect.y = 0
+                lost += 2
+                self.kill()
+            if self.rect.x >= 800:
+                self.speed = -1 * self.speed
+            elif self.rect.x <= 100:
+                self.speed = -1 * self.speed
+
+class Killer(GameSprite):
+    def update(self):
+        if self.rect.y < Starship.rect.y:
+            self.rect.y += self.sk
+        elif self.rect.y > Starship.rect.y:
+            self.rect.y -= self.sk
+        if self.rect.x > Starship.rect.x:
+            self.rect.x -= self.speed
+        if self.rect.x < Starship.rect.x:
+            self.rect.x += self.speed
+
+
+
 
 class Bullet(GameSprite):
     def update(self):
@@ -96,28 +125,37 @@ clock = time.Clock()
 FPS = 60
 max_lost = 3
 goal = 1000
+goal_score = 10
+bad_luck = 10
+puli = 0
+
 #Персонажи
-Starship = Player('rocket.png', round(win_width/2, 0),  win_height - 80, 80, 80, 5 )
+Starship = Player('rocket.png', 350, 420, 80, 80, 5, 0 )
+Killer = Killer('rocket.png', 350, 20, 60, 60, 5, 1 )
 monsters = sprite.Group()
 for i in range(1,6):
-    monster = Enemy('ufo.png', randint(5, win_width - 80), 20, randint(60, 80),randint(30, 50), 1)
+    monster = Enemy('ufo.png', randint(5, win_width - 80), 20, randint(60, 80),randint(30, 50), 1, 0)
     monsters.add(monster)
 
 bullets = sprite.Group()
 
 asteroids = sprite.Group()
 for i in range(1,3):
-    rock = Asteroid('asteroid.png', randint(5, win_width - 80), 20,randint(30, 50),randint(10, 30), 1)
+    rock = Enemy('asteroid.png', randint(5, win_width - 80), 20,randint(30, 50),randint(10, 30), 1, 0)
     asteroids.add(rock)
 
+stars = sprite.Group()
+for i in range(1,3):
+    star = Asteroid('star.png', randint(5, win_width - 80), 20 ,randint(40, 50),randint(20, 30), 1, 0,)
+    stars.add(star)
+
+minibosses = sprite.Group()
 #Музыка
 mixer.init()
 mixer.music.load('space.ogg')
-Space = mixer.Sound('space.ogg')
-Space.set_volume(0.2)
-Space.play()
+mixer.music.play()
 fire = mixer.Sound('fire.ogg')
-fire.set_volume(0.2)
+
 
 
 while run:
@@ -126,10 +164,13 @@ while run:
             run = False
         elif e.type == KEYDOWN:
             if e.key == K_SPACE:
-                fire.play()
                 Starship.fire()
                 if col_bul != 0:
                     col_bul -= 1
+                if bonus == 1:
+                    puli -= 1
+                    if puli == 0:
+                        bonus = 0
                 
                 
 
@@ -137,14 +178,21 @@ while run:
     if finish != True:
         window.blit(background,(0, 0))
         Starship.update()
+        minibosses.update()
+        Killer.update()
         monsters.update()
         bullets.update()
         asteroids.update()
+        stars.update()
         
         Starship.reset()
+        Killer.reset()
+        minibosses.draw(window)
         monsters.draw(window)
         bullets.draw(window)
         asteroids.draw(window)
+        stars.draw(window)
+
         if lost == 0:
             color = (200, 200, 200)
         elif lost == 1:
@@ -164,29 +212,45 @@ while run:
     colides = sprite.groupcollide(monsters, bullets, True, True)
     for c in colides:
         score += 1
-        monster = Enemy('ufo.png', randint(5, win_width - 80), 20, randint(60, 80),randint(30, 50), 1)
+        monster = Enemy('ufo.png', randint(5, win_width - 80), 20, randint(60, 80),randint(30, 50), 1, 0)
         monsters.add(monster)
+
+    colides = sprite.groupcollide(minibosses, bullets, True, True)
+    for c in colides:
+        score += 10
+
     
     colides = sprite.groupcollide(asteroids, bullets, True, True)
     for c in colides:
         score += 2
-        rock = Asteroid('asteroid.png', randint(5, win_width - 80), 20, randint(30, 50),randint(10, 30), 1)
+        rock = Asteroid('asteroid.png', randint(5, win_width - 80), 20, randint(30, 50),randint(10, 30), 1, 0)
         asteroids.add(rock)
+
+    colides = sprite.groupcollide(stars, bullets, True, True)
     
-    if sprite.spritecollide(Starship, monsters, False) or lost >= max_lost:
+    if sprite.spritecollide(Starship, monsters, False) or lost >= max_lost or sprite.spritecollide(Starship, asteroids, False):
         finish = True
         lose = font1.render("Вы проиграли!", 1 , (100, 100, 189))
         window.blit(lose, (200,200))
+
     if score >= goal:
         finish = True
         win = font1.render("Вы победили!", 1 , (0, 200, 189))
         window.blit(win, (200,200))
-    if sprite.spritecollide(Starship, asteroids, True):
+
+    if sprite.spritecollide(Starship, stars, True):
         bonus = 1
-        rock = Asteroid('asteroid.png', randint(5, win_width - 80), 20, randint(30, 50),randint(10, 30), 1)
-        asteroids.add(rock)
+        puli = 15
 
+    if score >= goal_score:
+        star = Asteroid('star.png', randint(5, win_width - 80), 20 ,randint(40, 50),randint(20, 30), 1, 0)
+        stars.add(star)
+        goal_score += 10
 
+    if score >= bad_luck:
+        miniboss = MiniBoss("kil.png", randint(200, 790), 20, 80, 80, 1, 1)
+        minibosses.add(miniboss)
+        bad_luck += 100
 
 
 
