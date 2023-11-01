@@ -89,13 +89,13 @@ class MiniBoss(GameSprite):
 class Killer(GameSprite):
     def update(self):
         if self.rect.y < Starship.rect.y:
-            self.rect.y += self.sk
+            self.rect.y += (self.speed / 2)
         elif self.rect.y > Starship.rect.y:
-            self.rect.y -= self.sk
+            self.rect.y -= (self.speed / 2)
         if self.rect.x > Starship.rect.x:
-            self.rect.x -= self.speed
+            self.rect.x -= (self.speed / 2)
         if self.rect.x < Starship.rect.x:
-            self.rect.x += self.speed
+            self.rect.x += (self.speed / 2)
 
 
 
@@ -107,7 +107,7 @@ class Bullet(GameSprite):
         if self.rect.y < 5:
             self.kill()
 
-
+#Разные параметры
 font.init()
 font1 = font.SysFont("Arial", 80)
 font2 = font.SysFont("Arial", 36)
@@ -126,12 +126,12 @@ FPS = 60
 max_lost = 3
 goal = 1000
 goal_score = 10
-bad_luck = 10
+bad_luck = 50
+kill_luck = 300
 puli = 0
 
 #Персонажи
-Starship = Player('rocket.png', 350, 420, 80, 80, 5, 0 )
-Killer = Killer('rocket.png', 350, 20, 60, 60, 5, 1 )
+Starship = Player('rocket.png', 600, (win_height - 80), 80, 80, 5, 0 )
 monsters = sprite.Group()
 for i in range(1,6):
     monster = Enemy('ufo.png', randint(5, win_width - 80), 20, randint(60, 80),randint(30, 50), 1, 0)
@@ -150,14 +150,18 @@ for i in range(1,3):
     stars.add(star)
 
 minibosses = sprite.Group()
+killeres = sprite.Group()
 #Музыка
 mixer.init()
 mixer.music.load('space.ogg')
-mixer.music.play()
+Space = mixer.Sound('space.ogg')
+Space.set_volume(0.2)
+Space.play()
 fire = mixer.Sound('fire.ogg')
+fire.set_volume(0.2)
 
 
-
+#Основная игра
 while run:
     for e in event.get():
         if e.type == QUIT:
@@ -179,14 +183,14 @@ while run:
         window.blit(background,(0, 0))
         Starship.update()
         minibosses.update()
-        Killer.update()
+        killeres.update()
         monsters.update()
         bullets.update()
         asteroids.update()
         stars.update()
-        
+            
         Starship.reset()
-        Killer.reset()
+        killeres.draw(window)
         minibosses.draw(window)
         monsters.draw(window)
         bullets.draw(window)
@@ -206,9 +210,9 @@ while run:
         window.blit(text_lose, (5, 30))
         text_bul = font2.render("Патронов: " + str(col_bul), 1, color)
         window.blit(text_bul, (5, 50))
-        
+            
 
-
+    #Условия
     colides = sprite.groupcollide(monsters, bullets, True, True)
     for c in colides:
         score += 1
@@ -219,16 +223,19 @@ while run:
     for c in colides:
         score += 10
 
-    
+    colides = sprite.groupcollide(killeres, bullets, True, True)
+    for c in colides:
+        score += 30
+        
     colides = sprite.groupcollide(asteroids, bullets, True, True)
     for c in colides:
         score += 2
-        rock = Asteroid('asteroid.png', randint(5, win_width - 80), 20, randint(30, 50),randint(10, 30), 1, 0)
+        rock = Enemy('asteroid.png', randint(5, win_width - 80), 20, randint(30, 50),randint(10, 30), 1, 0)
         asteroids.add(rock)
 
     colides = sprite.groupcollide(stars, bullets, True, True)
-    
-    if sprite.spritecollide(Starship, monsters, False) or lost >= max_lost or sprite.spritecollide(Starship, asteroids, False):
+        
+    if sprite.spritecollide(Starship, monsters, False) or lost >= max_lost or sprite.spritecollide(Starship, asteroids, False) or sprite.spritecollide(Starship, killeres, False) or sprite.spritecollide(Starship, minibosses, False):
         finish = True
         lose = font1.render("Вы проиграли!", 1 , (100, 100, 189))
         window.blit(lose, (200,200))
@@ -252,8 +259,14 @@ while run:
         minibosses.add(miniboss)
         bad_luck += 100
 
-
+    if score >= kill_luck:
+        Killer = Killer('killer.png', 350, 20, 60, 60, 5, 1)
+        killeres.add(Killer)
+        kill_luck += 300
 
 
     display.update()
     clock.tick(FPS)
+
+
+
